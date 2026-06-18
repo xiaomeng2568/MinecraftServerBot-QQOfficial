@@ -1,0 +1,24 @@
+[project]
+name = "mcserverbot-qqofficial"
+version = "0.1.0"
+description = "A Minecraft server operation bot based on NoneBot2, QQ Official Bot and MCSManager."
+readme = "README.md"
+requires-python = ">=3.10, <4.0"
+dependencies = [
+    "nonebot2[fastapi,httpx,websockets]>=2.5.0",
+    "nonebot-adapter-qq>=1.7.1",
+    "httpx>=0.28.1",
+    "psutil>=7.0.0",
+]
+
+[tool.nonebot]
+plugin_dirs = ["plugins"]
+plugins = [
+    "server_code"
+]
+builtin_plugins = ["echo"]
+
+[tool.nonebot.adapters]
+nonebot-adapter-qq = [
+    { name = "QQ", module_name = "nonebot.adapters.qq" }
+]

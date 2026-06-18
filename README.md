@@ -1,3 +1,25 @@
+### 这是什么？
+
+MinecraftServerBot-QQOfficial 是一个基于 NoneBot2、QQ 官方机器人和 MCSManager API 的 Minecraft 服务器运维机器人。
+
+它的作用是把 QQ 群、QQ 官方机器人、MCSManager 面板和 Minecraft Java 服务端连接起来，让服务器管理员可以直接在 QQ 群里查看和管理服务器。
+
+你可以通过 QQ 群指令完成这些事情：
+
+* 查看服务器是否在线
+* 查看当前在线人数
+* 查看在线玩家列表
+* 查看服务器版本和延迟
+* 查看 Java 内存与 CPU 占用
+* 查看系统内存占用
+* 查看世界存档和服务端目录大小
+* 查询 TPS
+* 启动、停止、重启服务器
+* 向 Minecraft 控制台发送命令
+* 定时向 QQ 群播报服务器状态
+
+本项目目前主要面向个人服主、小型 Minecraft 服务器管理员，以及想学习 QQ 官方机器人、NoneBot2 和 MCSManager API 联动的新手开发者。
+
 ## 适合新手吗？
 
 本项目适合想要通过 QQ 官方机器人管理 Minecraft 服务器的个人服主或小型服务器管理员。
@@ -174,7 +196,7 @@ PUBLIC_MC_PORT=25565
 
 ## 安全提醒
 
-请不要提交以下内容到 GitHub：
+请不要提交以下内容到 GitHub 也不要告诉你不信任的任何人：
 
 * `.env.prod`
 * QQ 官方机器人 AppSecret

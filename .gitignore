@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# NoneBot / env
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+logs/
+
+# local config
+config.local.py
+*.local.py
+
+# secrets
+*secret*
+*Secret*
+*apikey*
+*API_KEY*
+*.key
+
+# NapCat / QQ local data
+NapcatQQ/
+NapCatQQ/
+napcat_*.json
+Tencent Files/
+data/
+cache/
+
+# Node
+node_modules/
+
+# database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+Bot_backup_do_not_upload/
+Bot.zip

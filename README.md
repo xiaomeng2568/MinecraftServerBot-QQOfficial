@@ -187,4 +187,4 @@ PUBLIC_MC_PORT=25565
 
 `/exec`、`/op`、`/ban`、`/kick` 等命令具有高权限，请务必正确配置 `ADMIN_USER_IDS`。
 
-### 若有其他问题 请发送电子邮件至xiaomeng2568@163.com 一般每天晚上会看
+### 若有其他问题 请发送电子邮件至xiaomeng2568@163.com

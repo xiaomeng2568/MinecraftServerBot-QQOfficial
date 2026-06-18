@@ -86,43 +86,19 @@ QQ_BOTS=[{"id":1234567890,"token":"","secret":"YOUR_APP_SECRET","intent":{"c2c_g
 
 注意：AppSecret 是敏感信息，不要上传到 GitHub。
 
-### 5. 获取管理员 OpenID
+### 5. 获取管理员 OpenID 和群 OpenID
 
-机器人需要知道谁是管理员，否则任何人都可能执行高权限命令。
+本项目从 `v0.2.0` 开始内置 `/whoami` 指令，不需要再单独编写 whoami 测试插件。
 
-你可以先写一个简单的 `/whoami` 测试插件，或者通过 NoneBot 日志查看事件中的用户 ID。
-
-配置示例：
-
-```env
-ADMIN_USER_IDS=YOUR_QQ_OFFICIAL_USER_OPENID
-```
-
-如果有多个管理员，可以用英文逗号分隔：
-
-```env
-ADMIN_USER_IDS=OPENID_1,OPENID_2,OPENID_3
-```
-
-### 6. 获取群 OpenID
-
-定时播报需要群聊 OpenID。
-
-通常可以通过 QQ 官方机器人事件里的 `session_id` 获取。格式可能类似：
+启动机器人后，在 QQ 群里发送：
 
 ```text
-group_群OPENID_用户OPENID
+@机器人 /whoami
 ```
 
-中间那段就是群 OpenID。
+V0.2.0后可自动获取解析后的OpenID
 
-配置示例：
-
-```env
-REPORT_GROUP_OPENID=YOUR_GROUP_OPENID
-```
-
-### 7. 配置环境变量
+### 6. 配置环境变量
 
 复制示例配置：
 
@@ -134,13 +110,13 @@ cp .env.example .env.prod
 
 不要把 `.env.prod` 上传到 GitHub。
 
-### 8. 安装依赖
+### 7. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 9. 启动机器人
+### 8. 启动机器人
 
 ```bash
 nb run --reload
@@ -210,3 +186,5 @@ PUBLIC_MC_PORT=25565
 * 服务器真实管理入口
 
 `/exec`、`/op`、`/ban`、`/kick` 等命令具有高权限，请务必正确配置 `ADMIN_USER_IDS`。
+
+### 若有其他问题 请发送电子邮件至xiaomeng2568@163.com 一般每天晚上会看

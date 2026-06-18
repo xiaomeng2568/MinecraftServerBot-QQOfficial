@@ -36,14 +36,8 @@ from typing import Optional, Tuple, List
 # /pardon
 # /tps
 # /mchelp
+# /whoami
 #
-#
-# 不包含：
-# /backup
-# 玩家加入自动通知
-# 玩家退出自动通知
-# 死亡通知
-# 自动备份
 # ============================================================
 
 
@@ -63,6 +57,7 @@ INSTANCE_NAME = os.getenv("INSTANCE_NAME", "Minecraft Server")
 
 # 官方 QQ 机器人里，你自己的 user_id / openid
 # 通过@机器人 /whoami的返回值
+# V0.2.0后已经对此做了解析 直接填写即可
 ADMIN_USER_IDS = {
     item.strip()
     for item in os.getenv("ADMIN_USER_IDS", "YOUR_ADMIN_USER_OPENID").split(",")
@@ -1350,3 +1345,34 @@ async def start_hourly_report_task():
         )
 
         print("[服务器] 官方 QQ 每小时服务器状态播报已启动")
+
+
+# ====================
+# /whoami
+# ====================
+
+whoami_cmd = on_command("whoami", priority=5)
+
+@whoami_cmd.handle()
+async def _(event: Event):
+    user_id = event.get_user_id()
+    session_id = event.get_session_id()
+    event_type = event.get_type()
+
+    group_openid = "未检测到群 OpenID"
+
+    if session_id.startswith("group_"):
+        parts = session_id.split("_")
+        if len(parts) >= 3:
+            group_openid = parts[1]
+
+    await whoami_cmd.finish(
+        "当前事件信息：\n\n"
+        f"user_id: {user_id}\n"
+        f"session_id: {session_id}\n"
+        f"group_openid: {group_openid}\n"
+        f"type: {event_type}\n\n"
+        "说明：\n"
+        "user_id 可填写到 ADMIN_USER_IDS\n"
+        "group_openid 可填写到 REPORT_GROUP_OPENID"
+    )

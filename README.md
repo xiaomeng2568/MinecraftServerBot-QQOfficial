@@ -1,4 +1,4 @@
-### 这是什么
+## 这是什么
 
 MinecraftServerBot-QQOfficial 是一个基于 NoneBot2、QQ 官方机器人和 MCSManager API 的 Minecraft 服务器运维机器人。
 

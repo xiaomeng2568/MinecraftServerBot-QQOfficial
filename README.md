@@ -97,7 +97,7 @@ MCS_INSTANCE_UUID=YOUR_INSTANCE_UUID
 你需要在 QQ 开放平台 / QQ 机器人平台创建机器人，并获得：
 
 ```env
-QQ_BOTS=[{"id":1234567890,"token":"","secret":"YOUR_APP_SECRET","intent":{"c2c_group_at_messages":true,"direct_message":true,"at_messages":true},"use_websocket":true}]
+QQ_BOTS=[{"id":"1234567890","token":"","secret":"YOUR_APP_SECRET","intent":{"c2c_group_at_messages":true,"direct_message":true,"at_messages":true},"use_websocket":true}]
 ```
 
 其中：

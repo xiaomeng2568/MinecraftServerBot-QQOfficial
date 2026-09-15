@@ -25,16 +25,17 @@ with tempfile.TemporaryDirectory() as directory:
     if plugin is None:
         raise RuntimeError("测试插件加载失败")
 
-from plugins import server_code as bot
+from plugins.server_code import settings, monitoring, services, reporting
+from plugins.server_code.commands import control
 from plugins.server_code.config import Config
 from plugins.server_code.mcs_client import request_api
 
 
 class ConfigTests(unittest.TestCase):
     def test_dotenv_reaches_plugin(self):
-        self.assertEqual(bot.API_KEY, "test-key")
-        self.assertEqual(bot.ADMIN_USER_IDS, {"alice", "bob"})
-        self.assertFalse(bot.ENABLE_HOURLY_REPORT)
+        self.assertEqual(settings.API_KEY, "test-key")
+        self.assertEqual(settings.ADMIN_USER_IDS, {"alice", "bob"})
+        self.assertFalse(settings._config.enable_hourly_report)
 
     def test_admin_formats(self):
         self.assertEqual(Config(admin_user_ids="alice, bob, ").admin_ids(), {"alice", "bob"})
@@ -53,8 +54,8 @@ class ConfigTests(unittest.TestCase):
             info={"name": "java", "pid": 1, "cmdline": [], "memory_info": None},
             cwd=lambda: os.path.abspath("unrelated-server"),
         )
-        with patch.object(bot.psutil, "process_iter", return_value=[process]):
-            self.assertIsNone(bot.find_server_java_process_sync(os.path.abspath("target-server")))
+        with patch.object(monitoring.psutil, "process_iter", return_value=[process]):
+            self.assertIsNone(monitoring.find_server_java_process_sync(os.path.abspath("target-server")))
 
 
 class ApiTests(unittest.IsolatedAsyncioTestCase):
@@ -65,7 +66,7 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         context = AsyncMock()
         context.__aenter__.return_value = client
         with patch("plugins.server_code.mcs_client.httpx.AsyncClient", return_value=context):
-            return await request_api("http://panel", "/api/instance", bot.base_params())
+            return await request_api("http://panel", "/api/instance", services.base_params())
 
     async def test_success(self):
         response = httpx.Response(200, json={"status": 200, "data": {"status": 3}},
@@ -98,33 +99,33 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
             client.assert_not_called()
 
     async def test_multiline_command_is_rejected(self):
-        with patch.object(bot, "call_api", new_callable=AsyncMock) as api:
-            result = await bot.send_console_command("say hi\nstop")
+        with patch.object(services, "call_api", new_callable=AsyncMock) as api:
+            result = await services.send_console_command("say hi\nstop")
             self.assertEqual(result["status"], 400)
             api.assert_not_awaited()
 
     async def test_stop_is_graceful(self):
         event = SimpleNamespace(get_user_id=lambda: "alice")
-        with patch.object(bot, "call_api", new_callable=AsyncMock, return_value={"status": 200}) as api:
-            with patch.object(bot.stop_cmd, "finish", new_callable=AsyncMock, side_effect=FinishedException):
+        with patch.object(control, "call_api", new_callable=AsyncMock, return_value={"status": 200}) as api:
+            with patch.object(control.stop_cmd, "finish", new_callable=AsyncMock, side_effect=FinishedException):
                 with self.assertRaises(FinishedException):
-                    await bot.stop_cmd.handlers[0].call(event)
+                    await control.stop_cmd.handlers[0].call(event)
             api.assert_awaited_once_with("stop")
 
     async def test_unauthorized_stop_never_calls_api(self):
         event = SimpleNamespace(get_user_id=lambda: "stranger")
-        with patch.object(bot, "call_api", new_callable=AsyncMock) as api:
-            with patch.object(bot.stop_cmd, "finish", new_callable=AsyncMock, side_effect=FinishedException):
+        with patch.object(control, "call_api", new_callable=AsyncMock) as api:
+            with patch.object(control.stop_cmd, "finish", new_callable=AsyncMock, side_effect=FinishedException):
                 with self.assertRaises(FinishedException):
-                    await bot.stop_cmd.handlers[0].call(event)
+                    await control.stop_cmd.handlers[0].call(event)
             api.assert_not_awaited()
 
     async def test_shutdown_cancels_report(self):
         task = asyncio.create_task(asyncio.sleep(3600))
-        bot._hourly_report_task = task
-        await bot.stop_hourly_report_task()
+        reporting._task = task
+        await reporting.stop_report_task()
         self.assertTrue(task.cancelled())
-        self.assertIsNone(bot._hourly_report_task)
+        self.assertIsNone(reporting._task)
 
 
 if __name__ == "__main__":

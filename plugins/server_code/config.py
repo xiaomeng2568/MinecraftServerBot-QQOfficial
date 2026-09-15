@@ -12,7 +12,7 @@ class Config(BaseModel):
     admin_user_ids: str | list[str] = ""
     report_group_openid: str = ""
     total_disk_gb: float = Field(default=2000, gt=0)
-    enable_hourly_report: bool = True
+    enable_hourly_report: bool = False
     report_interval_seconds: int = Field(default=3600, ge=60)
     report_first_delay_seconds: int = Field(default=180, ge=0)
     public_mc_host: str = ""

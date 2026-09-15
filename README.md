@@ -156,6 +156,12 @@ python bot.py
 
 ## 本地开发与云端更新
 
+### 主动播报无权限 / 重连报错
+
+如果日志出现 `40034105: 主动消息失败, 无权限` 或 `RESUMED ... TypeError: 'str' object is not a mapping`，请先阅读 [云端故障处理与迁移](docs/troubleshooting.md)。前者需要平台允许主动消息，后者通过升级 QQ 适配器修复。
+
+当前主动播报默认关闭。没有主动消息权限时，使用 `@机器人 /reportnow` 获取状态；管理员可通过 `/reportstatus` 查看播报诊断，平台权限恢复后通过 `/reportretry` 恢复下一轮尝试。
+
 本地电脑用于编辑和测试；QQ 连接、MCSManager 操作和定时播报在云服务器上运行。
 
 ### 本地准备（Git Bash）
@@ -190,7 +196,7 @@ git -c http.proxy=http://127.0.0.1:7890 pull --ff-only
 
 `ADMIN_USER_IDS` 支持逗号分隔（`alice,bob`）或 JSON 数组（`["alice","bob"]`）。首次获取 OpenID 时可以先留空，此时运维命令无权限，但 `/whoami` 可用。定时播报需要有效的 `REPORT_GROUP_OPENID` 和 QQ 平台允许的主动消息权限；配置群 ID 不代表平台一定允许发送。
 
-### 本次维护变更
+### v0.2.2 维护变更
 
 - 使用 NoneBot 已加载的配置，修复只编辑 `.env.prod` 时插件仍使用默认值的问题。
 - `/stop` 改用 MCSManager 正常停止接口；请在面板中确认 Minecraft 实例的停止命令为 `stop`。正常停止和强制终止是两个不同接口，详见 [MCSManager 实例 API](https://docs.mcsmanager.com/zh_cn/apis/api_instance.html)。
@@ -199,6 +205,30 @@ git -c http.proxy=http://127.0.0.1:7890 pull --ff-only
 - 退出机器人时取消定时播报任务；未配置群 ID 时跳过任务创建。
 
 `TOTAL_DISK_GB` 仍为手动配置容量，报告中的百分比表示服务端目录大小占该容量的比例，并非整块磁盘实际已用百分比。TPS 当前仍使用 `forge tps`，其他服务端核心需要另行适配。
+
+## 代码结构
+
+```text
+plugins/server_code/
+├─ __init__.py          插件信息和模块加载入口
+├─ config.py            配置模型和校验
+├─ settings.py          加载后的共享配置
+├─ permissions.py       管理员权限
+├─ mcs_client.py        HTTP 请求与异常处理
+├─ services.py          MCSManager 业务接口
+├─ monitoring.py        本机 Java、内存、目录和 TCP 监控
+├─ parsing.py           玩家列表、日志和 TPS 解析
+├─ rendering.py         状态报告文本
+├─ reporting.py         定时播报、权限暂停和任务生命周期
+└─ commands/
+   ├─ control.py       启动、停止、重启、执行命令、广播
+   ├─ queries.py       日志、玩家、在线人数、资源、TPS、手动报告
+   ├─ players.py       白名单、OP、封禁与踢出
+   ├─ help.py          命令帮助和 OpenID 查询
+   └─ diagnostics.py   播报诊断与恢复
+```
+
+各模块由入口统一加载，仍是一个 `server_code` 插件，不要把子模块单独写入插件列表。移除了无关的内置 `echo` 配置，新增诊断功能无需额外安装第三方插件。
 
 ## 常见问题
 

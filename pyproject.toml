@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10, <4.0"
 dependencies = [
     "nonebot2[fastapi,httpx,websockets]>=2.5.0",
-    "nonebot-adapter-qq>=1.7.1",
+    "nonebot-adapter-qq>=1.7.2,<2.0",
     "httpx>=0.28.1",
     "psutil>=7.0.0",
     "pydantic>=2.0,<3.0",
@@ -17,7 +17,7 @@ plugin_dirs = ["plugins"]
 plugins = [
     "server_code"
 ]
-builtin_plugins = ["echo"]
+builtin_plugins = []
 
 [tool.nonebot.adapters]
 nonebot-adapter-qq = [

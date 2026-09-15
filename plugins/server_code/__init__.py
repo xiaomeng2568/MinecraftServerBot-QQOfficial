@@ -1,9 +1,12 @@
-from nonebot import on_command, get_driver, get_bots
+from nonebot import on_command, get_driver, get_bots, get_plugin_config, logger
+from contextlib import suppress
+
+from .config import Config
+from .mcs_client import request_api
 from nonebot.adapters import Event
 from nonebot.params import CommandArg
 
 import asyncio
-import httpx
 import os
 import re
 import time
@@ -45,55 +48,23 @@ from typing import Optional, Tuple, List
 # 基础配置区
 # ====================
 
-MCS_URL = os.getenv("MCS_URL", "http://127.0.0.1:23333")
-
-# 这里填你的 MCSManager API Key
-API_KEY = os.getenv("MCS_API_KEY", "YOUR_MCS_API_KEY")
-
-DAEMON_ID = os.getenv("MCS_DAEMON_ID", "YOUR_DAEMON_ID")
-INSTANCE_UUID = os.getenv("MCS_INSTANCE_UUID", "YOUR_INSTANCE_UUID")
-
-INSTANCE_NAME = os.getenv("INSTANCE_NAME", "Minecraft Server")
-
-# 官方 QQ 机器人里，你自己的 user_id / openid
-# 通过@机器人 /whoami的返回值
-# V0.2.0后已经对此做了解析 直接填写即可
-ADMIN_USER_IDS = {
-    item.strip()
-    for item in os.getenv("ADMIN_USER_IDS", "YOUR_ADMIN_USER_OPENID").split(",")
-    if item.strip()
-}
-
-# 你当前沙箱群 session_id：
-# 例如group_xxxxxxxxxxxxxxxxxxxxx_yyyyyyyyyyyyyyyyyyyy
-# 群 openid 通常是 session_id 中 group_ 后、第一个用户 openid 前的部分
-REPORT_GROUP_OPENID = os.getenv("REPORT_GROUP_OPENID", "YOUR_GROUP_OPENID")
-
-# 磁盘容量 默认数值2000GB 可自行更改
-TOTAL_DISK_GB = int(os.getenv("TOTAL_DISK_GB", "2000"))
-
+_config = get_plugin_config(Config)
+MCS_URL = _config.mcs_url
+API_KEY = _config.mcs_api_key.get_secret_value()
+DAEMON_ID = _config.mcs_daemon_id
+INSTANCE_UUID = _config.mcs_instance_uuid
+INSTANCE_NAME = _config.instance_name
+ADMIN_USER_IDS = _config.admin_ids()
+REPORT_GROUP_OPENID = _config.report_group_openid.strip()
+TOTAL_DISK_GB = _config.total_disk_gb
 DEFAULT_LOG_LINES = 10
 MAX_LOG_LINES = 60
-
 COMMAND_LOG_WAIT = 1.5
-
-
-# ====================
-# 定时播报配置
-# ====================
-
-ENABLE_HOURLY_REPORT = os.getenv("ENABLE_HOURLY_REPORT", "true").lower() == "true"
-
-# 每隔多少秒自动播报一次
-# 3600 = 1小时
-REPORT_INTERVAL_SECONDS = int(os.getenv("REPORT_INTERVAL_SECONDS", "3600"))
-
-# 启动后多久第一次播报
-REPORT_FIRST_DELAY_SECONDS = int(os.getenv("REPORT_FIRST_DELAY_SECONDS", "180"))
-
-# 玩家实际连接服务器用的公网IP或域名 可能需要部署一个或多个探针
-PUBLIC_MC_HOST = os.getenv("PUBLIC_MC_HOST", "")
-PUBLIC_MC_PORT = int(os.getenv("PUBLIC_MC_PORT", "25565"))
+ENABLE_HOURLY_REPORT = _config.enable_hourly_report
+REPORT_INTERVAL_SECONDS = _config.report_interval_seconds
+REPORT_FIRST_DELAY_SECONDS = _config.report_first_delay_seconds
+PUBLIC_MC_HOST = _config.public_mc_host
+PUBLIC_MC_PORT = _config.public_mc_port
 
 
 # ====================
@@ -364,46 +335,25 @@ def extract_tps_points(log_text: str, max_points: int = 3) -> str:
 
 async def call_api(action: str, extra: dict | None = None) -> dict:
     params = base_params()
-
     if extra:
         params.update(extra)
-
-    url = f"{MCS_URL}/api/protected_instance/{action}"
-
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.get(url, params=params)
-
-    try:
-        return resp.json()
-    except Exception:
-        return {
-            "status": resp.status_code,
-            "data": resp.text,
-        }
+    return await request_api(MCS_URL, f"/api/protected_instance/{action}", params)
 
 
 async def get_instance_info() -> dict:
-    params = base_params()
-    url = f"{MCS_URL}/api/instance"
-
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.get(url, params=params)
-
-    try:
-        return resp.json()
-    except Exception:
-        return {
-            "status": resp.status_code,
-            "data": resp.text,
-        }
+    return await request_api(MCS_URL, "/api/instance", base_params())
 
 
 async def get_output_log() -> str:
     data = await call_api("outputlog")
+    if data.get("status") != 200:
+        return str(data.get("data", "读取日志失败"))
     return str(data.get("data", ""))
 
 
 async def send_console_command(command: str) -> dict:
+    if any(char in command for char in ("\r", "\n", "\x00")):
+        return {"status": 400, "data": "控制台命令不能包含换行或空字符"}
     return await call_api("command", {"command": command})
 
 
@@ -432,9 +382,13 @@ async def get_server_basic_data() -> Optional[dict]:
     if info_json.get("status") != 200:
         return None
 
-    data = info_json.get("data", {})
-    config = data.get("config", {})
-    info = data.get("info", {})
+    data = info_json.get("data")
+    if not isinstance(data, dict):
+        return None
+    config = data.get("config") or {}
+    info = data.get("info") or {}
+    if not isinstance(config, dict) or not isinstance(info, dict):
+        return None
 
     return {
         "raw": data,
@@ -493,7 +447,6 @@ def find_server_java_process_sync(server_cwd: str) -> Optional[dict]:
     server_cwd_norm = normalize_path(server_cwd)
 
     exact_candidates = []
-    fallback_candidates = []
 
     for proc in psutil.process_iter(
         attrs=[
@@ -539,8 +492,6 @@ def find_server_java_process_sync(server_cwd: str) -> Optional[dict]:
                 "proc": proc,
             }
 
-            fallback_candidates.append(item)
-
             if server_cwd_norm and (
                 proc_cwd_norm == server_cwd_norm
                 or server_cwd_norm.lower() in cmdline_norm
@@ -551,7 +502,7 @@ def find_server_java_process_sync(server_cwd: str) -> Optional[dict]:
         except Exception:
             continue
 
-    candidates = exact_candidates or fallback_candidates
+    candidates = exact_candidates
 
     if not candidates:
         return None
@@ -720,10 +671,10 @@ async def _(event: Event):
     if deny:
         await stop_cmd.finish(deny)
 
-    result = await call_api("kill")
+    result = await call_api("stop")
 
     if result.get("status") == 200:
-        await stop_cmd.finish("服务器停止请求已发送。")
+        await stop_cmd.finish("服务器正常停止请求已发送，请等待存档完成。")
 
     await stop_cmd.finish(f"停止失败：{result.get('data')}")
 
@@ -1289,7 +1240,8 @@ async def _(event: Event):
 # ====================
 
 async def send_report_to_group():
-    bots = get_bots()
+    bots = {key: bot for key, bot in get_bots().items()
+            if bot.adapter.get_name() == "QQ"}
 
     if not bots:
         return False
@@ -1307,7 +1259,7 @@ async def send_report_to_group():
             return True
 
         except Exception as e:
-            print(f"[服务器] 官方 QQ 定时状态播报失败：{repr(e)}")
+            logger.warning("官方 QQ 定时状态播报失败：{}", type(e).__name__)
 
     return False
 
@@ -1320,10 +1272,10 @@ async def hourly_report_loop():
             sent = await send_report_to_group()
 
             if not sent:
-                print("[服务器] 暂无可用Bot，跳过本次定时状态播报")
+                logger.info("暂无可用 QQ Bot 或播报失败，跳过本次定时状态播报")
 
         except Exception as e:
-            print(f"[服务器] 定时状态播报失败：{repr(e)}")
+            logger.warning("定时状态播报失败：{}", type(e).__name__)
 
         await asyncio.sleep(REPORT_INTERVAL_SECONDS)
 
@@ -1339,12 +1291,16 @@ async def start_hourly_report_task():
     if not ENABLE_HOURLY_REPORT:
         return
 
-    if _hourly_report_task is None:
+    if not REPORT_GROUP_OPENID or REPORT_GROUP_OPENID.startswith("YOUR_"):
+        logger.warning("未配置 REPORT_GROUP_OPENID，自动播报未启动")
+        return
+
+    if _hourly_report_task is None or _hourly_report_task.done():
         _hourly_report_task = asyncio.create_task(
             hourly_report_loop()
         )
 
-        print("[服务器] 官方 QQ 每小时服务器状态播报已启动")
+        logger.info("官方 QQ 定时状态播报已启动，间隔 {} 秒", REPORT_INTERVAL_SECONDS)
 
 
 # ====================
@@ -1376,3 +1332,12 @@ async def _(event: Event):
         "user_id 可填写到 ADMIN_USER_IDS\n"
         "group_openid 可填写到 REPORT_GROUP_OPENID"
     )
+
+@_driver.on_shutdown
+async def stop_hourly_report_task():
+    global _hourly_report_task
+    if _hourly_report_task is not None:
+        _hourly_report_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await _hourly_report_task
+        _hourly_report_task = None

@@ -2,3 +2,4 @@ nonebot2[fastapi,httpx,websockets]>=2.5.0
 nonebot-adapter-qq>=1.7.1
 httpx>=0.28.1
 psutil>=7.0.0
+pydantic>=2.0,<3.0

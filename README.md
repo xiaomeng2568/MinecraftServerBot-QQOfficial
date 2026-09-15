@@ -141,8 +141,10 @@ pip install -r requirements.txt
 ### 8. 启动机器人
 
 ```bash
-nb run --reload
+python bot.py
 ```
+
+请使用安装依赖时的同一个 Python 环境。此入口会从项目目录加载 `.env.prod`，无需额外安装 `nb-cli`。生产环境不启用热重载。
 
 启动成功后，在 QQ 群里测试：
 
@@ -151,6 +153,52 @@ nb run --reload
 @机器人 /players
 @机器人 /memory
 ```
+
+## 本地开发与云端更新
+
+本地电脑用于编辑和测试；QQ 连接、MCSManager 操作和定时播报在云服务器上运行。
+
+### 本地准备（Git Bash）
+
+```bash
+git clone https://github.com/xiaomeng2568/MinecraftServerBot-QQOfficial.git
+cd MinecraftServerBot-QQOfficial
+python -m venv .venv
+source .venv/Scripts/activate
+python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
+```
+
+Linux 激活环境使用 `source .venv/bin/activate`。测试使用虚拟配置和模拟请求，不会连接 QQ 或操作 Minecraft。不要把云服务器的 `.venv` 复制到开发电脑。
+
+需要代理时，可只为当前 Git 命令指定代理：
+
+```bash
+git -c http.proxy=http://127.0.0.1:7890 pull --ff-only
+```
+
+### 云服务器更新
+
+1. 记录当前版本：`git rev-parse HEAD`，在仓库外备份实际使用的 `.env.prod`。
+2. 在进程管理器中停止机器人进程。
+3. 在仓库目录执行 `git pull --ff-only`。如提示本地修改冲突，先保留并合并修改，不要强制覆盖。
+4. 使用云端虚拟环境执行 `python -m pip install -r requirements.txt`。
+5. 核对 `.env.prod` 后，通过原有进程管理器运行 `python bot.py`。
+6. 检查插件加载日志，然后在 QQ 中验证 `/whoami`、`/online` 和 `/reportnow`。
+
+旧的本地副本如果使用 `MCSM_API_BASE` / `MCSM_API_KEY`，迁移时请改为本仓库的 `MCS_URL` / `MCS_API_KEY`，并补齐节点和实例 ID。系统环境变量优先于 `.env.prod`。
+
+`ADMIN_USER_IDS` 支持逗号分隔（`alice,bob`）或 JSON 数组（`["alice","bob"]`）。首次获取 OpenID 时可以先留空，此时运维命令无权限，但 `/whoami` 可用。定时播报需要有效的 `REPORT_GROUP_OPENID` 和 QQ 平台允许的主动消息权限；配置群 ID 不代表平台一定允许发送。
+
+### 本次维护变更
+
+- 使用 NoneBot 已加载的配置，修复只编辑 `.env.prod` 时插件仍使用默认值的问题。
+- `/stop` 改用 MCSManager 正常停止接口；请在面板中确认 Minecraft 实例的停止命令为 `stop`。正常停止和强制终止是两个不同接口，详见 [MCSManager 实例 API](https://docs.mcsmanager.com/zh_cn/apis/api_instance.html)。
+- 网络失败、超时和异常响应返回简明提示，不回显包含 API Key 的请求 URL；控制操作不会自动重试。MCSManager 请求直连配置的面板地址，不读取系统 HTTP 代理。
+- 未匹配到实例的 Java 进程时不再使用内存最大的其他 Java 进程；进程信息、系统内存和目录大小仍来自机器人所在机器，完整监控要求与 Minecraft 实例同机并有读取权限。
+- 退出机器人时取消定时播报任务；未配置群 ID 时跳过任务创建。
+
+`TOTAL_DISK_GB` 仍为手动配置容量，报告中的百分比表示服务端目录大小占该容量的比例，并非整块磁盘实际已用百分比。TPS 当前仍使用 `forge tps`，其他服务端核心需要另行适配。
 
 ## 常见问题
 

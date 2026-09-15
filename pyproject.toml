@@ -1,6 +1,6 @@
 [project]
 name = "mcserverbot-qqofficial"
-version = "0.2.0"
+version = "0.2.2"
 description = "A Minecraft server operation bot based on NoneBot2, QQ Official Bot and MCSManager."
 readme = "README.md"
 requires-python = ">=3.10, <4.0"

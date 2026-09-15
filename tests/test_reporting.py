@@ -130,8 +130,8 @@ class ReportingTests(unittest.IsolatedAsyncioTestCase):
         matchers = []
         for module in (control, diagnostics, help, queries, players):
             matchers.extend((name, value) for name, value in vars(module).items()
-                            if name.endswith("_cmd") and name != "whoami_cmd")
-        self.assertEqual(len(matchers), 21)
+                            if name.endswith("_cmd") and name not in {"whoami_cmd", "mc_help_cmd", "online_cmd", "players_cmd", "reportnow_cmd", "memory_cmd", "worldsize_cmd", "tps_cmd"})
+        self.assertEqual(len(matchers), 14)
         for name, matcher in matchers:
             with self.subTest(command=name), \
                  patch.object(matcher, "finish", new_callable=AsyncMock, side_effect=FinishedException) as finish:
@@ -141,7 +141,46 @@ class ReportingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_example_qq_configuration(self):
+        from pathlib import Path
+        from dotenv import dotenv_values
+        from nonebot.adapters.qq.config import Config
+        values = dotenv_values(Path(__file__).resolve().parents[1] / ".env.example")
+        config = Config(qq_bots=json.loads(values["QQ_BOTS"]))
+        self.assertIsInstance(config.qq_bots[0].id, str)
+
     def test_resumed_with_empty_string(self):
         payload = Dispatch.model_validate({"op": 0, "d": "", "s": 22, "t": "RESUMED"})
         event = Adapter.payload_to_event(payload)
         self.assertEqual(event.get_event_name(), "RESUMED")
+
+
+class PublicCommandTests(unittest.IsolatedAsyncioTestCase):
+    async def test_normal_player_can_use_all_public_commands(self):
+        from contextlib import ExitStack
+        event = SimpleNamespace(get_user_id=lambda: "normal-player",
+                                get_session_id=lambda: "friend_normal-player",
+                                get_type=lambda: "message")
+        data = {"cwd": "test-server", "online": 1, "max_players": 20}
+        size = {"world_label": "世界占用", "world_size_gb": 1,
+                "server_size_gb": 2, "disk_percent": 0.1}
+        memory = {"used_gb": 2, "total_gb": 8, "available_gb": 6, "percent": 25}
+        with ExitStack() as stack:
+            for name, result in {
+                "get_server_basic_data": data, "build_size_info": size,
+                "get_system_memory_info": memory, "find_server_java_process": None,
+                "build_report_status_text": "测试状态报告",
+                "send_command_and_read_log": ({"status": 200},
+                    "There are 1 of a max of 20 players online: Alex\n[12:00:00] Mean TPS: 20.0"),
+            }.items():
+                stack.enter_context(patch.object(queries, name, new_callable=AsyncMock, return_value=result))
+            for matcher in (help.mc_help_cmd, help.whoami_cmd, queries.online_cmd,
+                            queries.players_cmd, queries.reportnow_cmd, queries.memory_cmd,
+                            queries.worldsize_cmd, queries.tps_cmd):
+                with self.subTest(matcher=matcher), patch.object(
+                    matcher, "finish", new_callable=AsyncMock, side_effect=FinishedException
+                ) as finish:
+                    with self.assertRaises(FinishedException):
+                        await matcher.handlers[0].call(event)
+                    finish.assert_awaited_once()
+                    self.assertNotEqual(finish.call_args.args[0], "无权限")

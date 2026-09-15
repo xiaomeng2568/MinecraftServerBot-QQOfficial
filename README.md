@@ -194,7 +194,7 @@ git -c http.proxy=http://127.0.0.1:7890 pull --ff-only
 
 旧的本地副本如果使用 `MCSM_API_BASE` / `MCSM_API_KEY`，迁移时请改为本仓库的 `MCS_URL` / `MCS_API_KEY`，并补齐节点和实例 ID。系统环境变量优先于 `.env.prod`。
 
-`ADMIN_USER_IDS` 支持逗号分隔（`alice,bob`）或 JSON 数组（`["alice","bob"]`）。首次获取 OpenID 时可以先留空，此时运维命令无权限，但 `/whoami` 可用。定时播报需要有效的 `REPORT_GROUP_OPENID` 和 QQ 平台允许的主动消息权限；配置群 ID 不代表平台一定允许发送。
+`ADMIN_USER_IDS` 支持逗号分隔（`alice,bob`）或 JSON 数组（`["alice","bob"]`）。首次获取 OpenID 时可以先留空，此时公开查询可用，管理员指令无权限。定时播报需要有效的 `REPORT_GROUP_OPENID` 和 QQ 平台允许的主动消息权限；配置群 ID 不代表平台一定允许发送。
 
 ### v0.2.2 维护变更
 
@@ -288,3 +288,12 @@ PUBLIC_MC_PORT=25565
 `/exec`、`/op`、`/ban`、`/kick` 等命令具有高权限，请务必正确配置 `ADMIN_USER_IDS`。
 
 ### 若有其他问题 请发送电子邮件至xiaomeng2568@163.com
+
+
+## v0.3.1 指令权限
+
+普通玩家可使用 `/mchelp`（别名 `/ctihelp`）、`/whoami`、`/online`、`/players`、`/reportnow`、`/memory`、`/worldsize`、`/tps`。
+
+`/log`、服务器控制、玩家管理、`/reportstatus` 和 `/reportretry` 共 14 个主指令仍要求 `ADMIN_USER_IDS` 管理员权限。无需将普通玩家加入管理员列表；公开查询可展示玩家名单和服务器资源信息。
+
+此前配置示例误将 QQ AppID 写成数字，导致适配器校验失败；正确格式是 `"id":"1234567890"`。修正与升级说明见 [v0.3.1 发行说明](docs/releases/v0.3.1.md)。

@@ -44,10 +44,6 @@ players_cmd = on_command("players", priority=5)
 
 @players_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-    if deny:
-        await players_cmd.finish(deny)
-
     result, log_text = await send_command_and_read_log("list")
 
     if result.get("status") != 200:
@@ -67,10 +63,6 @@ online_cmd = on_command("online", priority=5)
 
 @online_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-    if deny:
-        await online_cmd.finish(deny)
-
     data = await get_server_basic_data()
 
     if not data:
@@ -86,11 +78,6 @@ reportnow_cmd = on_command("reportnow", priority=5)
 
 @reportnow_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-
-    if deny:
-        await reportnow_cmd.finish(deny)
-
     await reportnow_cmd.finish(
         await build_report_status_text()
     )
@@ -101,10 +88,6 @@ worldsize_cmd = on_command("worldsize", priority=5)
 
 @worldsize_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-    if deny:
-        await worldsize_cmd.finish(deny)
-
     data = await get_server_basic_data()
 
     if not data:
@@ -126,10 +109,6 @@ memory_cmd = on_command("memory", priority=5)
 
 @memory_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-    if deny:
-        await memory_cmd.finish(deny)
-
     data = await get_server_basic_data()
 
     if not data:
@@ -179,10 +158,6 @@ tps_cmd = on_command("tps", priority=5)
 
 @tps_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-    if deny:
-        await tps_cmd.finish(deny)
-
     result, log_text = await send_command_and_read_log("forge tps")
 
     if result.get("status") != 200:

@@ -1,7 +1,6 @@
 """QQ 指令：help"""
 from nonebot import on_command
 from nonebot.adapters import Event
-from ..permissions import get_event_user_id, require_admin_text
 
 
 mc_help_cmd = on_command("mchelp", aliases={"ctihelp"}, priority=5)
@@ -9,12 +8,10 @@ mc_help_cmd = on_command("mchelp", aliases={"ctihelp"}, priority=5)
 
 @mc_help_cmd.handle()
 async def _(event: Event):
-    deny = require_admin_text(get_event_user_id(event))
-    if deny:
-        await mc_help_cmd.finish(deny)
-
     await mc_help_cmd.finish(
-        "服务器 运维命令\n\n"
+        "服务器指令帮助\n\n"
+        "普通玩家可用：/mchelp /whoami /online /players /reportnow /memory /worldsize /tps\n"
+        "其他指令仅管理员可用。\n\n"
         "基础控制：\n"
         "/start - 启动服务器\n"
         "/stop - 停止服务器\n"
@@ -25,7 +22,7 @@ async def _(event: Event):
         "/reportretry - 权限修复后恢复下一轮播报\n"
         "/players - 查看在线玩家\n"
         "/online - 只看在线人数\n"
-        "/log - 查看最近10行日志\n"
+        "/log - 查看最近10行日志（管理员）\n"
         "/log 40 - 查看最近40行日志\n"
         "/worldsize - 查看世界/目录占用\n"
         "/memory - 查看 Java / 系统资源\n"
